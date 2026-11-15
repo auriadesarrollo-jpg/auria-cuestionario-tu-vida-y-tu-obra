@@ -78,3 +78,5 @@ pytest-cov>=4.1.0
 #   EMAIL_PROVEEDOR         — gmail | outlook | yahoo | icloud
 #   CLIENTE_ID              — ID del cliente (ej: AGT-001)
 #   CLIENTE_NOMBRE          — Nombre del cliente (ej: Anuar)
+
+email-validator
