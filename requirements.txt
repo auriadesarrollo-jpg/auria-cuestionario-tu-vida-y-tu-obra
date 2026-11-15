@@ -1,0 +1,80 @@
+# ============================================================
+# REQUIREMENTS - AURIA_2
+# Sistema de Automatización Postal con Inteligencia Empática
+# ============================================================
+#
+# Instalar todo:
+#     pip install -r requirements.txt
+#
+# Solo producción (sin testing):
+#     pip install -r requirements.txt --ignore-requires-python
+#
+# Verificar instalación:
+#     pip list | findstr -i "google genai schedule dotenv twilio requests"
+# ============================================================
+
+
+# ── NÚCLEO OBLIGATORIO ───────────────────────────────────────────────────────
+
+# Motor de IA — Gemini API (cerebro de AURelia y AURhelios)
+# La v1.0+ unificó la API — versiones anteriores tienen interfaz diferente
+google-genai>=1.0.0
+
+# Variables de entorno — carga el .env (Caja Fuerte de credenciales)
+python-dotenv>=1.0.0
+
+# Programación de tareas — reporte diario 18:00 hs y ciclos de revisión
+schedule>=1.2.0
+
+# HTTP — usado por enviar_telegram.py para llamadas a la API de Telegram
+requests>=2.31.0
+
+# Conexión con Bases de Datos y Servidor Web de Producción
+flask>=3.0.0
+flask-sqlalchemy>=3.1.0
+psycopg2-binary>=2.9.0
+gunicorn>=21.2.0
+flask-cors>=4.0.0
+
+# ── NOTIFICACIONES (opcionales según canal elegido) ──────────────────────────
+
+# WhatsApp vía Twilio — requerido si usás enviar_whatsapp.py
+# Instalación: pip install twilio
+twilio>=8.0.0
+
+
+# ── TESTING (solo entorno de desarrollo) ─────────────────────────────────────
+
+# Framework de testing
+pytest>=7.4.0
+
+# Reporte de cobertura de tests
+pytest-cov>=4.1.0
+
+
+# ── NOTAS DE INSTALACIÓN ─────────────────────────────────────────────────────
+#
+# DEPENDENCIAS QUE VIENEN CON PYTHON (no requieren instalación):
+#   imaplib     — conexión IMAP para CarteroUniversal y CarteroBlindado
+#   email       — parsing de emails
+#   logging     — sistema de logs (auria_logger.py)
+#   json        — lectura de base de conocimiento de clientes
+#   os          — manejo de rutas y variables de entorno
+#   threading   — thread-safety en auria_logger.py
+#   pathlib     — rutas robustas en gestor_memoria.py y agenda_auria.py
+#   datetime    — timestamps en todos los módulos
+#   time        — bucle principal en agenda_auria.py y main.py
+#
+# VARIABLES DE ENTORNO REQUERIDAS EN .env:
+#   GOOGLE_API_KEY          — API key de Google AI Studio (aistudio.google.com)
+#   TELEGRAM_BOT_TOKEN      — Token del bot de Telegram (si usás ese canal)
+#   TELEGRAM_CHAT_ID        — Chat ID de Telegram (si usás ese canal)
+#   TWILIO_ACCOUNT_SID      — Account SID de Twilio (si usás WhatsApp)
+#   TWILIO_AUTH_TOKEN       — Auth Token de Twilio (si usás WhatsApp)
+#   TWILIO_WHATSAPP_NUMBER  — Número Twilio formato: whatsapp:+14155238886
+#   TU_WHATSAPP             — Tu número formato: whatsapp:+549XXXXXXXXXX
+#   EMAIL_USER              — Email del cliente (para CarteroBlindado)
+#   EMAIL_PASS              — App Password del email
+#   EMAIL_PROVEEDOR         — gmail | outlook | yahoo | icloud
+#   CLIENTE_ID              — ID del cliente (ej: AGT-001)
+#   CLIENTE_NOMBRE          — Nombre del cliente (ej: Anuar)
