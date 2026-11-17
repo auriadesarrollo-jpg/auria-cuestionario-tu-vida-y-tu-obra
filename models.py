@@ -121,6 +121,15 @@ class CategoryConfig(Base):
 
 # Helper para inicializar la base de datos (por defecto SQLite local oficial)
 def init_db(database_url="sqlite:///aur_ia_data.db"):
-    engine = create_engine(database_url, connect_args={"check_same_thread": False} if "sqlite" in database_url else {})
+    if "sqlite" in database_url:
+        engine = create_engine(database_url, connect_args={"check_same_thread": False})
+    else:
+        engine = create_engine(
+            database_url,
+            pool_pre_ping=True,   # Verifica que la conexión esté viva antes de usarla
+            pool_recycle=300,     # Renueva conexiones cada 5 minutos
+            pool_size=3,
+            max_overflow=2,
+        )
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)
