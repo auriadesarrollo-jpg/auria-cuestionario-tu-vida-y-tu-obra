@@ -119,8 +119,8 @@ class CategoryConfig(Base):
     user = relationship("User", back_populates="categories")
 
 
-# Helper para inicializar la base de datos (por defecto SQLite local)
-def init_db(database_url="sqlite:///auria_local.db"):
+# Helper para inicializar la base de datos (por defecto SQLite local oficial)
+def init_db(database_url="sqlite:///aur_ia_data.db"):
     engine = create_engine(database_url, connect_args={"check_same_thread": False} if "sqlite" in database_url else {})
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)
