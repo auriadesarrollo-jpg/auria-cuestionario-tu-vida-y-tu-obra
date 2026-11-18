@@ -681,21 +681,40 @@ def ver_instructivo_prueba():
     </html>
     """, 200
 
+CARPETA_INTERNA = os.path.dirname(os.path.abspath(__file__))
+
 @app.route('/')
 def cuestionario():
-    return send_file(os.path.join(CARPETA_RAIZ, 'index.html'))
+    return send_file(os.path.join(CARPETA_INTERNA, 'index.html'))
 
 @app.route('/validation.js')
 def validation_js():
-    return send_file(os.path.join(CARPETA_RAIZ, 'validation.js'))
+    return send_file(os.path.join(CARPETA_INTERNA, 'validation.js'))
 
 @app.route('/instructivo')
 def instructivo():
-    return send_file(os.path.join(CARPETA_RAIZ, 'emails_para_clientes_potenciales', 'email_04_INSTRUCTIVO.html'))
+    # Apunta directamente a instructivo.html en la raíz interna de la aplicación
+    return send_file(os.path.join(CARPETA_INTERNA, 'instructivo.html'))
 
-@app.route('/imagenes_Cuestionario_VyO/<path:filename>')
+@app.route('/invitacion')
+def invitacion():
+    return send_file(os.path.join(CARPETA_INTERNA, 'invitacion.html'))
+
+@app.route('/instructivo-gmail')
+def instructivo_gmail():
+    return send_file(os.path.join(CARPETA_INTERNA, 'instructivo_OAuth2_gmail.pdf'))
+
+@app.route('/instructivo-outlook')
+def instructivo_outlook():
+    return send_file(os.path.join(CARPETA_INTERNA, 'instructivo_OAuth2_outlook.pdf'))
+
+@app.route('/<path:filename>')
 def servir_imagenes(filename):
-    return send_from_directory(os.path.join(CARPETA_RAIZ, 'imagenes_Cuestionario_VyO'), filename)
+    # Como las imágenes están sueltas en la raíz junto a app.py, 
+    # filtramos por extensiones de imagen para servir solo los archivos gráficos.
+    if filename.endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg')):
+        return send_from_directory(CARPETA_INTERNA, filename)
+    return "No encontrado", 404
 
 @app.route('/ping', methods=['GET'])
 def ping():
