@@ -25,7 +25,7 @@
 // 1) INICIALIZACIÓN
 // =========================================================
 
-const BACKEND_URL = "http://127.0.0.1:5000";
+const BACKEND_URL = window.location.origin;
 const REQUEST_TIMEOUT_MS = 10000; // 10 segundos de límite de espera de red
 
 // Variable de Estado del Flujo Activo ('integral' o 'profesional')
@@ -472,9 +472,9 @@ async function handleFormSubmit(event) {
         clearTimeout(timeoutId);
 
         if (error.name === "AbortError") {
-            alert("⏱️ La petición de guardado ha excedido el tiempo de espera (Timeout). Comprueba si el servidor local de AUR+IA está activo en el puerto 5000.");
+            alert("⏱️ La petición de guardado tardó demasiado. Intentá de nuevo en unos segundos.");
         } else if (error.message.includes("Failed to fetch")) {
-            alert("❌ No se pudo conectar con el Backend local. Asegúrate de ejecutar 'python app.py' en tu consola local para que esté listo en http://127.0.0.1:5000");
+            alert("❌ No se pudo conectar con el servidor. Revisá tu conexión a internet o intentá de nuevo en unos segundos.");
         } else {
             alert(`⚠️ Error al enviar el cuestionario: ${error.message}`);
         }
@@ -486,8 +486,8 @@ async function handleFormSubmit(event) {
             submitBtn.disabled = false;
         }
     }
-}
 
+}
 // =========================================================
 // 6) AUTOCOMPLETADO DEL FORMULARIO: cargarDatos()
 // =========================================================
