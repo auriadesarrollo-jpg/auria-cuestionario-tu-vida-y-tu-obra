@@ -1311,7 +1311,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const campoCodigo = document.getElementById("codigo_usu");
     if (!campoCodigo || document.getElementById("barra-acceso-personal")) return;
 
-    // Campo de la clave de acceso (si todavía no existe)
+    // Campo de la clave de acceso (definido en index.html; respaldo si no existiera)
     let campoClave = document.getElementById("clave_acceso_usu");
     if (!campoClave) {
         campoClave = document.createElement("input");
@@ -1319,9 +1319,21 @@ document.addEventListener("DOMContentLoaded", () => {
         campoClave.id = "clave_acceso_usu";
         campoClave.name = "clave_acceso_usu";
         campoClave.placeholder = "Clave de acceso a AUR+IA";
-        campoClave.style.cssText = "flex:1; text-transform:uppercase;";
+        campoClave.style.cssText = "flex:1;";
         campoCodigo.insertAdjacentElement("afterend", campoClave);
     }
+
+    // Botón del "ojo" para mostrar u ocultar la clave de acceso
+    const btnOjoClave = document.getElementById("toggle-clave-acceso");
+    if (btnOjoClave && campoClave && !btnOjoClave.dataset.bound) {
+        btnOjoClave.dataset.bound = "true";
+        btnOjoClave.addEventListener("click", () => {
+            const esPassword = campoClave.type === "password";
+            campoClave.type = esPassword ? "text" : "password";
+            btnOjoClave.title = esPassword ? "Ocultar clave de acceso" : "Mostrar clave de acceso";
+        });
+    }
+
     // Estos datos permiten que el navegador ofrezca guardar y completar el código y la clave
     campoCodigo.autocomplete = "username";
     campoClave.autocomplete = "current-password";

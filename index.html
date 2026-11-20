@@ -647,9 +647,9 @@
         footer {
             text-align: center;
             margin-top: 30px;
+            padding: 0 12px 20px 12px;
             color: #888;
             font-size: 0.9rem;
-            padding-bottom: 20px;
         }
 
         input[name="clave_aplicacion"]::placeholder {
@@ -657,9 +657,39 @@
             font-style: italic;
         }
 
+        .logo-wrapper {
+            text-align: center;
+            margin-top: 8px;
+            padding-bottom: 6px;
+        }
+
+        .logo-auria {
+            max-width: 500px;
+            width: 90%;
+            height: auto;
+            filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.15));
+        }
+
+        .titulo-bienvenida {
+            margin-top: 4px;
+            color: #4A7BA7;
+            font-size: clamp(1.35rem, 6vw, 2rem);
+            max-width: 100%;
+            overflow-wrap: break-word;
+        }
+
         @media (min-width: 600px) {
             footer {
                 margin-top: 60px;
+            }
+
+            .logo-wrapper {
+                margin-top: -20px;
+            }
+
+            .titulo-bienvenida {
+                margin-top: -15px;
+                font-size: 2.3rem;
             }
         }
 
@@ -1302,14 +1332,70 @@
             color: #4A7BA7;
             /* Azul corporativo de AUR+IA */
         }
+
+        .fila-recarga {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-codigo-usu {
+            width: 100%;
+            text-transform: uppercase;
+        }
+
+        @media (min-width: 600px) {
+            .fila-recarga {
+                flex-direction: row;
+                align-items: stretch;
+            }
+
+            .input-codigo-usu {
+                flex: 1;
+                width: auto;
+            }
+        }
+
+        .campo-clave-acceso {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-clave-acceso {
+            width: 100%;
+            padding-right: 42px;
+            box-sizing: border-box;
+        }
+
+        .btn-ojo-clave {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.15em;
+            color: #666;
+            padding: 4px;
+        }
+
+        @media (min-width: 600px) {
+            .campo-clave-acceso {
+                flex: 1;
+                width: auto;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div style="text-align: center; margin-top: -60px; padding-bottom: -10px;">
+        <div class="logo-wrapper">
             <img src="https://i.postimg.cc/9fPQzx9d/AUR-IA-logo-con-marco-dorado-SIN-FONDO-(1).png" alt="Logo AUR+IA"
-                style="max-width: 500px; width: 90%; height: auto; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.15));">
+                class="logo-auria">
         </div>
 
         <!-- BOTÓN VOLVER GLOBAL — NUEVO, una sola vez, fuera de todo -->
@@ -1330,7 +1416,7 @@
 
         <div id="pantalla-inicial-auria" class="pantalla-inicial">
 
-            <h1 style="margin-top:-30px; color:#4A7BA7; font-size:2.3rem;"><i>¡BIENVENID@!</i></h1>
+            <h1 class="titulo-bienvenida"><i>¡BIENVENID@!</i></h1>
 
             <h2 style="color:#a79e4a;">¿Cómo deseas comenzar?</h2>
 
@@ -1619,9 +1705,21 @@
                                 presiona recargar)
                             </span>
                         </label>
-                        <div style="display: flex; gap: 10px;">
+                        <div class="fila-recarga">
                             <input type="text" name="codigo_usu" id="codigo_usu" placeholder="Ej: USU-0001"
-                                autocomplete="off" data-lpignore="true" style="flex: 1; text-transform: uppercase;">
+                                autocomplete="off" data-lpignore="true" class="input-codigo-usu">
+
+                            <div class="campo-clave-acceso">
+                                <input type="password" id="clave_acceso_usu" name="clave_acceso_usu"
+                                    placeholder="Clave de acceso a AUR+IA" autocomplete="current-password"
+                                    class="input-clave-acceso">
+                                <button type="button" id="toggle-clave-acceso" class="btn-ojo-clave"
+                                    title="Mostrar u ocultar clave de acceso"
+                                    aria-label="Mostrar u ocultar clave de acceso">
+                                    👁️
+                                </button>
+                            </div>
+
                             <button type="button" class="btn-cargar" onclick="cargarDatos()">
                                 RECARGAR<br>MIS DATOS
                             </button>
@@ -3147,10 +3245,8 @@
     <div class="modal-contenido">
 
         <div class="modal-personajes">
-
-            <img src="imagenes_Cuestionario_VyO/AURhelios.png" id="img-aurhelios">
-            <img src="imagenes_Cuestionario_VyO/AURelia.png" id="img-aurelia">
-
+            <img src="/AURhelios.png" id="img-aurhelios" alt="AURhelios">
+            <img src="/AURelia.png" id="img-aurelia" alt="AURelia">
         </div>
 
         <h2>

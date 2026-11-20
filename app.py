@@ -716,6 +716,10 @@ def servir_imagenes(filename):
         return send_from_directory(CARPETA_INTERNA, filename)
     return "No encontrado", 404
 
+@app.route('/favicon_cuestionario/<path:filename>')
+def servir_favicon_cuestionario(filename):
+    return send_from_directory(os.path.join(CARPETA_INTERNA, 'favicon_cuestionario'), filename)
+
 @app.route('/ping', methods=['GET'])
 def ping():
     return "OK", 200
