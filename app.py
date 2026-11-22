@@ -191,22 +191,32 @@ def _clave_guardada(email_contacto):
     finally:
         sesion.close()
 
-def sincronizar_con_procesador(data, email_contacto, clave_cifrada):
+def sincronizar_con_procesador(data, email_contacto, clave_cifrada, codigo_usuario=None, es_automatico=True):
     """
-    PUENTE: copia a las tablas que lee pipeline.py (users, personal_profiles,
-    professional_profiles y category_configs) lo que la persona cargó en el Cuestionario.
-    Solo se usa en Modo AUTOMÁTICO (email real). Usa su propia sesión: si algo falla,
-    el guardado normal del Cuestionario no se ve afectado.
+    Copia a las tablas de Supabase (users, personal_profiles, professional_profiles
+    y category_configs) lo cargado en el Cuestionario, tanto en Modo MANUAL como en
+    Modo AUTOMÁTICO. Si algo falla, el guardado principal no se ve afectado.
     """
     flujo = (data.get("flujo") or "profesional").lower()
     if flujo not in ("integral", "profesional"):
         flujo = "profesional"
 
+    codigo_limpio = (codigo_usuario or "").strip().upper()
+    correo_manual_unico = f"{codigo_limpio.lower()}@manual.auria" if codigo_limpio else "modo_manual@local.com"
+    clave_busqueda = email_contacto if es_automatico else correo_manual_unico
+
     sesion = SessionLocal()
     try:
-        user = sesion.query(User).filter_by(email_contacto=email_contacto).first()
+        user = sesion.query(User).filter_by(email_contacto=clave_busqueda).first()
+
+        # Si pasa de Modo MANUAL a Modo AUTOMÁTICO, reutiliza su fila manual y le asigna su correo real
+        if not user and es_automatico and codigo_limpio:
+            user = sesion.query(User).filter_by(email_contacto=correo_manual_unico).first()
+            if user:
+                user.email_contacto = email_contacto
+
         if not user:
-            user = User(email_contacto=email_contacto)
+            user = User(email_contacto=clave_busqueda)
             sesion.add(user)
             sesion.flush()
 
@@ -214,30 +224,51 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada):
         user.nombre = sanitize_input(data.get("nombre", ""))
         user.celular = sanitize_input(data.get("celular", ""))
         user.flujo_activo = flujo
-        if not user.correo_actual:
-            user.correo_actual = email_contacto
-        if clave_cifrada:  # solo se reemplaza si la persona escribió una clave nueva
-            user.clave_aplicacion_cifrada = clave_cifrada
 
-        # Perfil personal: solo se actualiza en vista INTEGRAL (en PROFESIONAL no se toca)
+        if es_automatico:
+            if not user.correo_actual:
+                user.correo_actual = email_contacto
+            if clave_cifrada:
+                user.clave_aplicacion_cifrada = clave_cifrada
+
+        # Datos extra del cuestionario (para no perderlos en la base)
+        canales_extra = sanitize_input(
+            data.get("canales_comunicacion") or data.get("canales") or ""
+        )
+        jubilado_val = sanitize_input(data.get("es_jubilado") or data.get("jubilado") or "")
+        recuerdos_ia = sanitize_input(data.get("conocimiento_manual") or "")
+
+        # Perfil personal
         personal = sesion.query(PersonalProfile).filter_by(user_id=user.id).first()
         if not personal:
             personal = PersonalProfile(user_id=user.id)
             sesion.add(personal)
-        if flujo == "integral":
-            personal.apodo = sanitize_input(data.get("apodo", ""))
-            personal.actividades = sanitize_input(data.get("actividades", ""))
-            personal.familia = sanitize_input(data.get("familia", ""))
-            personal.amigos = sanitize_input(data.get("amigos", ""))
-            personal.mascotas = sanitize_input(data.get("mascotas", ""))
-            personal.fechas = sanitize_input(data.get("fechas", ""))
-            personal.vida_extra = sanitize_input(data.get("vida_extra", ""))
+
+        vida_extra_base = sanitize_input(data.get("vida_extra", ""))
+        extra_personal_partes = [p for p in [vida_extra_base, f"Jubilado/Pensionado: {jubilado_val}" if jubilado_val else "", f"Canales: {canales_extra}" if canales_extra else ""] if p]
+
+        if flujo == "integral" or any(extra_personal_partes):
+            if data.get("apodo") is not None:
+                personal.apodo = sanitize_input(data.get("apodo", ""))
+            if data.get("actividades") is not None:
+                personal.actividades = sanitize_input(data.get("actividades", ""))
+            if data.get("familia") is not None:
+                personal.familia = sanitize_input(data.get("familia", ""))
+            if data.get("amigos") is not None:
+                personal.amigos = sanitize_input(data.get("amigos", ""))
+            if data.get("mascotas") is not None:
+                personal.mascotas = sanitize_input(data.get("mascotas", ""))
+            if data.get("fechas") is not None:
+                personal.fechas = sanitize_input(data.get("fechas", ""))
+            if extra_personal_partes:
+                personal.vida_extra = " | ".join(extra_personal_partes)
 
         # Perfil profesional
         prof = sesion.query(ProfessionalProfile).filter_by(user_id=user.id).first()
         if not prof:
             prof = ProfessionalProfile(user_id=user.id)
             sesion.add(prof)
+
         prof.tarea_profesional = sanitize_input(data.get("tarea_profesional", ""))
         prof.fricciones_operativas = sanitize_input(data.get("fricciones_operativas", ""))
         prof.prioridades_delegacion = sanitize_input(data.get("prioridades_delegacion", ""))
@@ -245,7 +276,10 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada):
         prof.empresa = sanitize_input(data.get("empresa", ""))
         prof.companeros = sanitize_input(data.get("companeros", ""))
         prof.social_extra = sanitize_input(data.get("social_extra", ""))
-        prof.obra_extra = sanitize_input(data.get("obra_extra", ""))
+
+        obra_extra_base = sanitize_input(data.get("obra_extra", ""))
+        extra_obra_partes = [p for p in [obra_extra_base, f"Recordar para AURelia/AURhelios: {recuerdos_ia}" if recuerdos_ia else ""] if p]
+        prof.obra_extra = " | ".join(extra_obra_partes)
 
         # Las 9 categorías
         categorias_json = data.get("categorias") or {}
@@ -262,7 +296,7 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada):
             cat_db.remitentes = sanitize_input(cat_data.get("remitentes", ""))
 
         sesion.commit()
-        print(f"🔗 Puente al procesador: datos copiados a la base para {email_contacto}")
+        print(f"🔗 Puente al procesador: datos copiados a la base para {clave_busqueda} ({codigo_limpio or 'sin código'})")
     except Exception:
         sesion.rollback()
         raise
@@ -470,12 +504,17 @@ def enviar_cuestionario():
             session["recordar"] = False
         session["ultimo_acceso"] = time.time()
 
-        # --- PUENTE al procesador de correos (solo Modo AUTOMÁTICO); si falla, no afecta el guardado ---
-        if es_automatico:
-            try:
-                sincronizar_con_procesador(data, email_contacto, clave_cifrada)
-            except Exception as e:
-                print(f"⚠️ El puente al procesador falló (el guardado normal NO se afectó): {e}")
+        # --- PUENTE a Supabase para Modo MANUAL y Modo AUTOMÁTICO; si falla, no afecta el guardado ---
+        try:
+            sincronizar_con_procesador(
+                data,
+                email_contacto,
+                clave_cifrada,
+                codigo_usuario=codigo_usuario,
+                es_automatico=es_automatico,
+            )
+        except Exception as e:
+            print(f"⚠️ El puente al procesador falló (el guardado normal NO se afectó): {e}")
 
         clave_ok = _clave_guardada(email_contacto) if es_automatico else False
         aviso = None
