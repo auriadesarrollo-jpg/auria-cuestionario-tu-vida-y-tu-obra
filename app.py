@@ -231,12 +231,32 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada, codigo_usuar
             if clave_cifrada:
                 user.clave_aplicacion_cifrada = clave_cifrada
 
-        # Datos extra del cuestionario (para no perderlos en la base)
-        canales_extra = sanitize_input(
-            data.get("canales_comunicacion") or data.get("canales") or ""
+        # Campos de jubilación y canales desde el cuestionario (nombres exactos en index.html)
+        es_jubilado_val = sanitize_input(data.get("es_jubilado") or data.get("jubilado") or "")
+        jubilado_comentario_val = sanitize_input(data.get("jubilado_comentario") or "")
+        telegram_val = sanitize_input(data.get("tiene_telegram") or data.get("telegram") or "")
+        whatsapp_val = sanitize_input(
+            data.get("preferencia_whatsapp")
+            or data.get("tiene_whatsapp")
+            or data.get("whatsapp")
+            or data.get("canales_comunicacion")
+            or data.get("canales")
+            or ""
         )
-        jubilado_val = sanitize_input(data.get("es_jubilado") or data.get("jubilado") or "")
         recuerdos_ia = sanitize_input(data.get("conocimiento_manual") or "")
+
+        es_jubilado_relevante = (
+            es_jubilado_val if es_jubilado_val and es_jubilado_val.lower() != "no" else ""
+        )
+        partes_jubilado = [p for p in [es_jubilado_relevante, jubilado_comentario_val] if p]
+        texto_jubilado = " - ".join(partes_jubilado)
+
+        partes_canales = []
+        if telegram_val:
+            partes_canales.append(f"Telegram: {telegram_val}")
+        if whatsapp_val:
+            partes_canales.append(f"WhatsApp: {whatsapp_val}")
+        texto_canales = " / ".join(partes_canales)
 
         # Perfil personal
         personal = sesion.query(PersonalProfile).filter_by(user_id=user.id).first()
@@ -245,21 +265,18 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada, codigo_usuar
             sesion.add(personal)
 
         vida_extra_base = sanitize_input(data.get("vida_extra", ""))
-        extra_personal_partes = [p for p in [vida_extra_base, f"Jubilado/Pensionado: {jubilado_val}" if jubilado_val else "", f"Canales: {canales_extra}" if canales_extra else ""] if p]
+        extra_personal_partes = [
+            p for p in [
+                vida_extra_base,
+                f"Jubilado/Pensionado: {texto_jubilado}" if texto_jubilado else "",
+                f"Canales: {texto_canales}" if texto_canales else "",
+            ] if p
+        ]
 
         if flujo == "integral" or any(extra_personal_partes):
-            if data.get("apodo") is not None:
-                personal.apodo = sanitize_input(data.get("apodo", ""))
-            if data.get("actividades") is not None:
-                personal.actividades = sanitize_input(data.get("actividades", ""))
-            if data.get("familia") is not None:
-                personal.familia = sanitize_input(data.get("familia", ""))
-            if data.get("amigos") is not None:
-                personal.amigos = sanitize_input(data.get("amigos", ""))
-            if data.get("mascotas") is not None:
-                personal.mascotas = sanitize_input(data.get("mascotas", ""))
-            if data.get("fechas") is not None:
-                personal.fechas = sanitize_input(data.get("fechas", ""))
+            for campo in ("apodo", "actividades", "familia", "amigos", "mascotas", "fechas"):
+                if data.get(campo) is not None:
+                    setattr(personal, campo, sanitize_input(data.get(campo, "")))
             if extra_personal_partes:
                 personal.vida_extra = " | ".join(extra_personal_partes)
 
@@ -269,16 +286,24 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada, codigo_usuar
             prof = ProfessionalProfile(user_id=user.id)
             sesion.add(prof)
 
-        prof.tarea_profesional = sanitize_input(data.get("tarea_profesional", ""))
-        prof.fricciones_operativas = sanitize_input(data.get("fricciones_operativas", ""))
-        prof.prioridades_delegacion = sanitize_input(data.get("prioridades_delegacion", ""))
-        prof.tipo_empleo = sanitize_input(data.get("tipo_empleo", ""))
-        prof.empresa = sanitize_input(data.get("empresa", ""))
-        prof.companeros = sanitize_input(data.get("companeros", ""))
-        prof.social_extra = sanitize_input(data.get("social_extra", ""))
+        for campo in (
+            "tarea_profesional",
+            "fricciones_operativas",
+            "prioridades_delegacion",
+            "tipo_empleo",
+            "empresa",
+            "companeros",
+            "social_extra",
+        ):
+            setattr(prof, campo, sanitize_input(data.get(campo, "")))
 
         obra_extra_base = sanitize_input(data.get("obra_extra", ""))
-        extra_obra_partes = [p for p in [obra_extra_base, f"Recordar para AURelia/AURhelios: {recuerdos_ia}" if recuerdos_ia else ""] if p]
+        extra_obra_partes = [
+            p for p in [
+                obra_extra_base,
+                f"Recordar para AURelia/AURhelios: {recuerdos_ia}" if recuerdos_ia else "",
+            ] if p
+        ]
         prof.obra_extra = " | ".join(extra_obra_partes)
 
         # Las 9 categorías
@@ -635,14 +660,83 @@ def cargar_datos():
         session_db.close()
 
 def _armar_datos_persona(perfil):
-    """Arma los datos de una persona para mostrarlos en el Cuestionario (los mismos que devuelve /cargar-datos)."""
+    """
+    Arma los datos de una persona para mostrarlos en el Cuestionario (los mismos que devuelve /cargar-datos).
+    Prioriza la información persistida en Supabase y usa usuario.json como respaldo si existiera.
+    """
     datos_json = {}
     carpeta_usuario = _buscar_carpeta_usuario(perfil.codigo_usuario)
     if carpeta_usuario:
         ruta_json = os.path.join(carpeta_usuario, "usuario.json")
         if os.path.exists(ruta_json):
-            with open(ruta_json, "r", encoding="utf-8") as f:
-                datos_json = json.load(f)
+            try:
+                with open(ruta_json, "r", encoding="utf-8") as f:
+                    datos_json = json.load(f) or {}
+            except Exception:
+                datos_json = {}
+
+    # Reconstruir desde Supabase (Tramo 3)
+    codigo_limpio = (perfil.codigo_usuario or "").strip().upper()
+    correo_manual_unico = f"{codigo_limpio.lower()}@manual.auria" if codigo_limpio else "modo_manual@local.com"
+    correo_real = (perfil.email_contacto or "").strip()
+
+    sesion = SessionLocal()
+    try:
+        user = None
+        if correo_real and correo_real != "modo_manual@local.com":
+            user = sesion.query(User).filter_by(email_contacto=correo_real).first()
+        if not user and codigo_limpio:
+            user = sesion.query(User).filter_by(email_contacto=correo_manual_unico).first()
+
+        if user:
+            datos_json.setdefault("nombre", user.nombre or perfil.nombre or "")
+            datos_json.setdefault("celular", user.celular or perfil.celular or "")
+            datos_json.setdefault("email_servicio", user.email_servicio or perfil.email_servicio or "")
+            flujo_bd = str(getattr(user, "flujo_activo", "") or "").strip()
+            if flujo_bd:
+                datos_json["flujo"] = flujo_bd
+            personal = sesion.query(PersonalProfile).filter_by(user_id=user.id).first()
+            if personal:
+                for campo in ("apodo", "actividades", "familia", "amigos", "mascotas", "fechas", "vida_extra"):
+                    val = getattr(personal, campo, None)
+                    if val:
+                        datos_json[campo] = val
+
+            prof = sesion.query(ProfessionalProfile).filter_by(user_id=user.id).first()
+            if prof:
+                for campo in (
+                    "tarea_profesional",
+                    "fricciones_operativas",
+                    "prioridades_delegacion",
+                    "tipo_empleo",
+                    "empresa",
+                    "companeros",
+                    "social_extra",
+                    "obra_extra",
+                ):
+                    val = getattr(prof, campo, None)
+                    if val:
+                        datos_json[campo] = val
+
+            cats_db = sesion.query(CategoryConfig).filter_by(user_id=user.id).all()
+            if cats_db:
+                categorias_armadas = dict(datos_json.get("categorias") or {})
+                for c in cats_db:
+                    key = str(c.category_number)
+                    prev = dict(categorias_armadas.get(key) or {})
+                    prev.update({
+                        "nombre": c.category_name or prev.get("nombre") or f"Categoría {c.category_number}",
+                        "enabled": bool(c.enabled),
+                        "modo": c.modo or prev.get("modo") or "revision",
+                        "tono": c.tono or prev.get("tono") or "",
+                        "personalizado": c.personalizado or prev.get("personalizado") or "",
+                        "remitentes": c.remitentes or prev.get("remitentes") or "",
+                    })
+                    categorias_armadas[key] = prev
+                datos_json["categorias"] = categorias_armadas
+    finally:
+        sesion.close()
+
     return {
         "codigo_usuario": perfil.codigo_usuario,
         "nombre": perfil.nombre,
