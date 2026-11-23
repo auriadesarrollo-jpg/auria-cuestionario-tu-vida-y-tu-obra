@@ -1,0 +1,16 @@
+# Datos y secretos: NUNCA al repositorio
+.env
+*.env
+instance/
+*.db
+*.sqlite
+*.key
+00_Base_Conocimiento_json_Clientes/
+backpus/
+respaldos/
+usuarios_eliminados/
+__pycache__/
+*.pyc
+venv/
+.venv/
+logs/
