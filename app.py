@@ -277,11 +277,21 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada, codigo_usuar
             for c in ("apodo", "actividades", "familia", "amigos", "mascotas", "fechas")
         ) or any(extra_personal_partes)
 
+        print("🔎 DIAG guardado → flujo:", flujo, "| tiene_datos_personales:", tiene_datos_personales,
+              "| texto_jubilado:", repr(texto_jubilado)[:80], "| texto_canales:", repr(texto_canales)[:80],
+              "| llaves recibidas:", sorted(k for k in data.keys() if k in ("es_jubilado", "jubilado_comentario", "tiene_telegram", "preferencia_whatsapp", "jubilado", "telegram", "whatsapp")))
+        
+        print("🔎 DIAG guardado → flujo:", flujo, "| tiene_datos_personales:", tiene_datos_personales,
+              "| texto_jubilado:", repr(texto_jubilado)[:80], "| texto_canales:", repr(texto_canales)[:80],
+              "| llaves recibidas:", sorted(k for k in data.keys() if k in ("es_jubilado", "jubilado_comentario", "tiene_telegram", "preferencia_whatsapp", "jubilado", "telegram", "whatsapp")))
+        
         if flujo == "integral" or tiene_datos_personales:
             for campo in ("apodo", "actividades", "familia", "amigos", "mascotas", "fechas"):
                 if data.get(campo) is not None:
                     setattr(personal, campo, sanitize_input(data.get(campo, "")))
             personal.vida_extra = " | ".join(extra_personal_partes)
+
+            print("🔎 DIAG vida_extra guardada:", repr(personal.vida_extra)[:200])
 
 
         # Perfil profesional
@@ -702,15 +712,18 @@ def _armar_datos_persona(perfil):
             personal = sesion.query(PersonalProfile).filter_by(user_id=user.id).first()
             
 
+            print("🔎 DIAG carga → personal encontrado:", bool(personal))
             if personal:
-                for campo in ("apodo", "actividades", "familia", "amigos", "mascotas", "fechas", "vida_extra"):
+                for campo in ("apodo", "actividades", "familia", "amigos", "mascotas", "fechas"):
                     val = getattr(personal, campo, None)
                     if val:
                         datos_json[campo] = val
 
-                vida_txt = str(datos_json.get("vida_extra") or "")
-                for segmento in vida_txt.split(" | "):
+                partes_libres = []
+                for segmento in str(getattr(personal, "vida_extra", "") or "").split(" | "):
                     seg = segmento.strip()
+                    if not seg:
+                        continue
                     if seg.startswith("Jubilado/Pensionado:"):
                         cuerpo = seg.split(":", 1)[1].strip()
                         if " - " in cuerpo:
@@ -722,8 +735,7 @@ def _armar_datos_persona(perfil):
                         if jub_com.strip():
                             datos_json.setdefault("jubilado_comentario", jub_com.strip())
                     elif seg.startswith("Canales:"):
-                        cuerpo_can = seg.split(":", 1)[1].strip()
-                        for parte in cuerpo_can.split(" / "):
+                        for parte in seg.split(":", 1)[1].strip().split(" / "):
                             p_strip = parte.strip()
                             if p_strip.startswith("Telegram:"):
                                 val_tg = p_strip.split(":", 1)[1].strip()
@@ -733,6 +745,12 @@ def _armar_datos_persona(perfil):
                                 val_wa = p_strip.split(":", 1)[1].strip()
                                 if val_wa:
                                     datos_json.setdefault("preferencia_whatsapp", val_wa)
+                    else:
+                        partes_libres.append(seg)
+
+                if partes_libres:
+                    datos_json["vida_extra"] = " | ".join(partes_libres)
+            print("🔎 DIAG carga → llaves de datos_json:", sorted(datos_json.keys()))
 
             prof = sesion.query(ProfessionalProfile).filter_by(user_id=user.id).first()
             if prof:
