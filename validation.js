@@ -519,57 +519,79 @@ function poblarFormulario(datos) {
     // email_servicio no se toca: es un campo oculto con valor fijo, no hace falta autocompletarlo
     // ===== AGREGADO: campos personales, profesionales y Biblioteca =====
     const jsonInfo = datos.json_conocimiento || {};
-    const perfil = jsonInfo.perfil_usuario || {};
-    const vinculos = perfil.vinculos_y_entorno || {};
-    const profesional = jsonInfo.esfera_profesional || {};
+    const vApodo = jsonInfo.apodo || (jsonInfo.perfil_usuario && jsonInfo.perfil_usuario.apodo_preferido) || "";
+    const vActividades = jsonInfo.actividades || (jsonInfo.perfil_usuario && jsonInfo.perfil_usuario.actividades_y_hobbies) || "";
+    const vFamilia = jsonInfo.familia || (jsonInfo.perfil_usuario && jsonInfo.perfil_usuario.vinculos_y_entorno && jsonInfo.perfil_usuario.vinculos_y_entorno.familia) || "";
+    const vAmigos = jsonInfo.amigos || (jsonInfo.perfil_usuario && jsonInfo.perfil_usuario.vinculos_y_entorno && jsonInfo.perfil_usuario.vinculos_y_entorno.amigos) || "";
+    const vMascotas = jsonInfo.mascotas || (jsonInfo.perfil_usuario && jsonInfo.perfil_usuario.vinculos_y_entorno && jsonInfo.perfil_usuario.vinculos_y_entorno.mascotas) || "";
+    const vFechas = jsonInfo.fechas || (jsonInfo.perfil_usuario && jsonInfo.perfil_usuario.vinculos_y_entorno && jsonInfo.perfil_usuario.vinculos_y_entorno.fechas_importantes) || "";
 
-    // Vida personal (Modo INTEGRAL)
     const campoApodo = document.getElementById("apodo");
-    if (campoApodo && perfil.apodo_preferido) campoApodo.value = perfil.apodo_preferido;
+    if (campoApodo && vApodo) campoApodo.value = vApodo;
 
     const campoActividades = document.getElementById("actividades");
-    if (campoActividades && perfil.actividades_y_hobbies) campoActividades.value = perfil.actividades_y_hobbies;
+    if (campoActividades && vActividades) campoActividades.value = vActividades;
 
     const campoFamilia = document.getElementById("familia");
-    if (campoFamilia && vinculos.familia) campoFamilia.value = vinculos.familia;
+    if (campoFamilia && vFamilia) campoFamilia.value = vFamilia;
 
     const campoAmigos = document.getElementById("amigos");
-    if (campoAmigos && vinculos.amigos) campoAmigos.value = vinculos.amigos;
+    if (campoAmigos && vAmigos) campoAmigos.value = vAmigos;
 
     const campoMascotas = document.getElementById("mascotas");
-    if (campoMascotas && vinculos.mascotas) campoMascotas.value = vinculos.mascotas;
+    if (campoMascotas && vMascotas) campoMascotas.value = vMascotas;
 
     const campoFechas = document.getElementById("fechas");
-    if (campoFechas && vinculos.fechas_importantes) campoFechas.value = vinculos.fechas_importantes;
+    if (campoFechas && vFechas) campoFechas.value = vFechas;
 
-    // Vida profesional (ambos modos)
+    const vTarea = jsonInfo.tarea_profesional || (jsonInfo.esfera_profesional && jsonInfo.esfera_profesional.rol) || "";
+    const vTipoEmpleo = jsonInfo.tipo_empleo || (jsonInfo.esfera_profesional && jsonInfo.esfera_profesional.tipo_empleo) || "";
+    const vEmpresa = jsonInfo.empresa || (jsonInfo.esfera_profesional && jsonInfo.esfera_profesional.empresa_o_proyecto) || "";
+    const vCompaneros = jsonInfo.companeros || (jsonInfo.esfera_profesional && jsonInfo.esfera_profesional.companeros_clave) || "";
+    const vSocialExtra = jsonInfo.social_extra || (jsonInfo.esfera_profesional && jsonInfo.esfera_profesional.social_extra) || "";
+    const vObraExtra = jsonInfo.obra_extra || (jsonInfo.esfera_profesional && jsonInfo.esfera_profesional.obra_extra) || "";
+    const vVidaExtra = jsonInfo.vida_extra || "";
+    const vFricciones = jsonInfo.fricciones_operativas || (jsonInfo.esfera_profesional && jsonInfo.esfera_profesional.fricciones_operativas) || "";
+    const vPrioridades = jsonInfo.prioridades_delegacion || (jsonInfo.esfera_profesional && jsonInfo.esfera_profesional.prioridades_delegacion) || "";
+
     const campoTarea = document.getElementById("tarea_profesional");
-    if (campoTarea && profesional.rol) campoTarea.value = profesional.rol;
+    if (campoTarea && vTarea) campoTarea.value = vTarea;
 
     const campoTipoEmpleo = document.getElementById("tipo_empleo");
-    if (campoTipoEmpleo && profesional.tipo_empleo) campoTipoEmpleo.value = profesional.tipo_empleo;
+    if (campoTipoEmpleo && vTipoEmpleo) campoTipoEmpleo.value = vTipoEmpleo;
 
     const campoEmpresa = document.getElementById("empresa");
-    if (campoEmpresa && profesional.empresa_o_proyecto) campoEmpresa.value = profesional.empresa_o_proyecto;
+    if (campoEmpresa && vEmpresa) campoEmpresa.value = vEmpresa;
 
     const campoCompaneros = document.getElementById("companeros");
-    if (campoCompaneros && profesional.companeros_clave) campoCompaneros.value = profesional.companeros_clave;
+    if (campoCompaneros && vCompaneros) campoCompaneros.value = vCompaneros;
 
     const campoSocialExtra = document.getElementById("social_extra");
-    if (campoSocialExtra && profesional.social_extra) campoSocialExtra.value = profesional.social_extra;
+    if (campoSocialExtra && vSocialExtra) campoSocialExtra.value = vSocialExtra;
 
     const campoObraExtra = document.getElementById("obra_extra");
-    if (campoObraExtra && profesional.obra_extra) campoObraExtra.value = profesional.obra_extra;
+    if (campoObraExtra && vObraExtra) campoObraExtra.value = vObraExtra;
 
     const campoVidaExtra = document.getElementById("vida_extra");
-    if (campoVidaExtra && profesional.vida_extra) campoVidaExtra.value = profesional.vida_extra;
-
+    if (campoVidaExtra && vVidaExtra) campoVidaExtra.value = vVidaExtra;
 
     const campoFricciones = document.getElementById("fricciones_operativas");
-    if (campoFricciones && profesional.fricciones_operativas) campoFricciones.value = profesional.fricciones_operativas;
+    if (campoFricciones && vFricciones) campoFricciones.value = vFricciones;
 
     const campoPrioridades = document.getElementById("prioridades_delegacion");
-    if (campoPrioridades && profesional.prioridades_delegacion) campoPrioridades.value = profesional.prioridades_delegacion;
+    if (campoPrioridades && vPrioridades) campoPrioridades.value = vPrioridades;
+
+    const campoJubilado = document.getElementById("es_jubilado") || document.getElementById("jubilado");
+    if (campoJubilado && jsonInfo.es_jubilado) campoJubilado.value = jsonInfo.es_jubilado;
+
+    const campoJubComentario = document.getElementById("jubilado_comentario");
+    if (campoJubComentario && jsonInfo.jubilado_comentario) campoJubComentario.value = jsonInfo.jubilado_comentario;
+
+    const campoTelegram = document.getElementById("tiene_telegram") || document.getElementById("telegram");
+    if (campoTelegram && jsonInfo.tiene_telegram) campoTelegram.value = jsonInfo.tiene_telegram;
+
+    const campoWhatsapp = document.getElementById("preferencia_whatsapp") || document.getElementById("whatsapp");
+    if (campoWhatsapp && jsonInfo.preferencia_whatsapp) campoWhatsapp.value = jsonInfo.preferencia_whatsapp;
 
     // Clave de aplicación: nunca se muestra; solo se avisa si ya hay una guardada
     const campoClave = document.querySelector('input[name="clave_aplicacion"]');

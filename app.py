@@ -272,13 +272,17 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada, codigo_usuar
                 f"Canales: {texto_canales}" if texto_canales else "",
             ] if p
         ]
+        tiene_datos_personales = any(
+            data.get(c) not in (None, "")
+            for c in ("apodo", "actividades", "familia", "amigos", "mascotas", "fechas")
+        ) or any(extra_personal_partes)
 
-        if flujo == "integral" or any(extra_personal_partes):
+        if flujo == "integral" or tiene_datos_personales:
             for campo in ("apodo", "actividades", "familia", "amigos", "mascotas", "fechas"):
                 if data.get(campo) is not None:
                     setattr(personal, campo, sanitize_input(data.get(campo, "")))
-            if extra_personal_partes:
-                personal.vida_extra = " | ".join(extra_personal_partes)
+            personal.vida_extra = " | ".join(extra_personal_partes)
+
 
         # Perfil profesional
         prof = sesion.query(ProfessionalProfile).filter_by(user_id=user.id).first()
@@ -696,11 +700,39 @@ def _armar_datos_persona(perfil):
             if flujo_bd:
                 datos_json["flujo"] = flujo_bd
             personal = sesion.query(PersonalProfile).filter_by(user_id=user.id).first()
+            
+
             if personal:
                 for campo in ("apodo", "actividades", "familia", "amigos", "mascotas", "fechas", "vida_extra"):
                     val = getattr(personal, campo, None)
                     if val:
                         datos_json[campo] = val
+
+                vida_txt = str(datos_json.get("vida_extra") or "")
+                for segmento in vida_txt.split(" | "):
+                    seg = segmento.strip()
+                    if seg.startswith("Jubilado/Pensionado:"):
+                        cuerpo = seg.split(":", 1)[1].strip()
+                        if " - " in cuerpo:
+                            jub_estado, jub_com = cuerpo.split(" - ", 1)
+                        else:
+                            jub_estado, jub_com = cuerpo, ""
+                        if jub_estado.strip():
+                            datos_json.setdefault("es_jubilado", jub_estado.strip())
+                        if jub_com.strip():
+                            datos_json.setdefault("jubilado_comentario", jub_com.strip())
+                    elif seg.startswith("Canales:"):
+                        cuerpo_can = seg.split(":", 1)[1].strip()
+                        for parte in cuerpo_can.split(" / "):
+                            p_strip = parte.strip()
+                            if p_strip.startswith("Telegram:"):
+                                val_tg = p_strip.split(":", 1)[1].strip()
+                                if val_tg:
+                                    datos_json.setdefault("tiene_telegram", val_tg)
+                            elif p_strip.startswith("WhatsApp:"):
+                                val_wa = p_strip.split(":", 1)[1].strip()
+                                if val_wa:
+                                    datos_json.setdefault("preferencia_whatsapp", val_wa)
 
             prof = sesion.query(ProfessionalProfile).filter_by(user_id=user.id).first()
             if prof:
