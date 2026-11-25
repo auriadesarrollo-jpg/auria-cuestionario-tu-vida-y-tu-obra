@@ -334,6 +334,7 @@ async function handleFormSubmit(event) {
     payload.biblioteca_manual = bibliotecaServidor;
 
     // Agregar campos del Modo Integral si está activo
+    // Agregar campos del Modo Integral si está activo
     if (flujoActivo === "integral") {
         payload.apodo = sanitizeText(formData.get("apodo"));
         payload.actividades = sanitizeText(formData.get("actividades"));
@@ -341,6 +342,10 @@ async function handleFormSubmit(event) {
         payload.amigos = sanitizeText(formData.get("amigos"));
         payload.mascotas = sanitizeText(formData.get("mascotas"));
         payload.fechas = sanitizeText(formData.get("fechas"));
+        payload.es_jubilado = sanitizeText(formData.get("es_jubilado"));
+        payload.jubilado_comentario = sanitizeText(formData.get("jubilado_comentario"));
+        payload.tiene_telegram = sanitizeText(formData.get("tiene_telegram"));
+        payload.preferencia_whatsapp = sanitizeText(formData.get("preferencia_whatsapp"));
         payload.vida_extra = sanitizeText(formData.get("vida_extra"));
     }
 
