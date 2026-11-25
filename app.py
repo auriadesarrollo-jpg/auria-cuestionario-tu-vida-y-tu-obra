@@ -245,10 +245,13 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada, codigo_usuar
         )
         recuerdos_ia = sanitize_input(data.get("conocimiento_manual") or "")
 
-        es_jubilado_relevante = (
-            es_jubilado_val if es_jubilado_val and es_jubilado_val.lower() != "no" else ""
-        )
-        partes_jubilado = [p for p in [es_jubilado_relevante, jubilado_comentario_val] if p]
+        mapa_jubilado = {
+            "no": "No, no soy jubilado/a",
+            "si": "Sí, soy jubilado/a o pensionado/a",
+            "proximo": "Próximamente me jubilo",
+        }
+        etiqueta_jubilado = mapa_jubilado.get(es_jubilado_val.lower(), es_jubilado_val)
+        partes_jubilado = [p for p in [etiqueta_jubilado, jubilado_comentario_val] if p]
         texto_jubilado = " - ".join(partes_jubilado)
 
         partes_canales = []
@@ -675,8 +678,17 @@ def _armar_datos_persona(perfil):
                             jub_estado, jub_com = cuerpo.split(" - ", 1)
                         else:
                             jub_estado, jub_com = cuerpo, ""
-                        if jub_estado.strip():
-                            datos_json.setdefault("es_jubilado", jub_estado.strip())
+                        mapa_jubilado_inv = {
+                            "no, no soy jubilado/a": "no",
+                            "sí, soy jubilado/a o pensionado/a": "si",
+                            "próximamente me jubilo": "proximo",
+                        }
+                        estado_limpio = jub_estado.strip()
+                        if estado_limpio:
+                            datos_json.setdefault(
+                                "es_jubilado",
+                                mapa_jubilado_inv.get(estado_limpio.lower(), estado_limpio),
+                            )
                         if jub_com.strip():
                             datos_json.setdefault("jubilado_comentario", jub_com.strip())
                     elif seg.startswith("Canales:"):
