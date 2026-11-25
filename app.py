@@ -618,61 +618,6 @@ def subir_biblioteca():
         print(f"⚠️ Error al subir archivo a la biblioteca: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/cargar-datos', methods=['POST'])
-def cargar_datos():
-    session_db = SessionLocal()
-    try:
-        entrada = request.get_json(silent=True) or {}
-        codigo = (entrada.get("codigo_usu") or "").strip().upper()
-        clave = _normalizar_clave(entrada.get("clave"))
-
-        if not codigo or not clave:
-            return jsonify({"status": "error", "message": "Escribí tu código de usuario y tu clave de acceso."}), 400
-        if _demasiados_intentos(codigo):
-            return jsonify({"status": "error", "message": "Demasiados intentos fallidos. Esperá unos minutos y volvé a probar."}), 429
-
-        perfil = session_db.query(PerfilCliente).filter(PerfilCliente.codigo_usuario == codigo).first()
-        if not perfil or not perfil.clave_acceso_hash or not check_password_hash(perfil.clave_acceso_hash, clave):
-            _registrar_intento_fallido(codigo)
-            return jsonify({"status": "error", "message": "El código o la clave de acceso no son correctos."}), 401
-
-        # La persona demostró quién es: queda registrada en esta sesión del navegador
-        INTENTOS_FALLIDOS.pop(codigo, None)
-        session.permanent = bool(entrada.get("recordar"))
-        session["codigo_usuario"] = perfil.codigo_usuario
-
-        session["recordar"] = bool(entrada.get("recordar"))
-        session["ultimo_acceso"] = time.time()
-        print(f"🔑 Ingreso de {perfil.codigo_usuario}: recordar={session['recordar']}")
-
-        datos_json = {}
-        carpeta_usuario = _buscar_carpeta_usuario(perfil.codigo_usuario)
-        if carpeta_usuario:
-            ruta_json = os.path.join(carpeta_usuario, "usuario.json")
-            if os.path.exists(ruta_json):
-                with open(ruta_json, "r", encoding="utf-8") as f:
-                    datos_json = json.load(f)
-
-        return jsonify({
-            "status": "success",
-            "datos": {
-                "codigo_usuario": perfil.codigo_usuario,
-                "nombre": perfil.nombre,
-                "email_contacto": perfil.email_contacto,
-                "email_servicio": perfil.email_servicio,
-                "celular": perfil.celular,
-                "clave_guardada": _clave_guardada(perfil.email_contacto),
-                "modo": _modo_de_persona(perfil),
-                "json_conocimiento": datos_json
-            }
-        }), 200
-
-    except Exception as e:
-        print(f"❌ Error en /cargar-datos: {e}")
-        return jsonify({"status": "error", "message": "No se pudieron cargar los datos. Intentá de nuevo."}), 500
-    finally:
-        session_db.close()
-
 def _armar_datos_persona(perfil):
     """
     Arma los datos de una persona para mostrarlos en el Cuestionario (los mismos que devuelve /cargar-datos).
@@ -797,6 +742,47 @@ def _armar_datos_persona(perfil):
         "modo": _modo_de_persona(perfil),
         "json_conocimiento": datos_json
     }
+
+@app.route('/cargar-datos', methods=['POST'])
+def cargar_datos():
+    session_db = SessionLocal()
+    try:
+        entrada = request.get_json(silent=True) or {}
+        codigo = (entrada.get("codigo_usu") or "").strip().upper()
+        clave = _normalizar_clave(entrada.get("clave"))
+
+        if not codigo or not clave:
+            return jsonify({"status": "error", "message": "Escribí tu código de usuario y tu clave de acceso."}), 400
+        if _demasiados_intentos(codigo):
+            return jsonify({"status": "error", "message": "Demasiados intentos fallidos. Esperá unos minutos y volvé a probar."}), 429
+
+        perfil = session_db.query(PerfilCliente).filter(PerfilCliente.codigo_usuario == codigo).first()
+        if not perfil or not perfil.clave_acceso_hash or not check_password_hash(perfil.clave_acceso_hash, clave):
+            _registrar_intento_fallido(codigo)
+            return jsonify({"status": "error", "message": "El código o la clave de acceso no son correctos."}), 401
+
+        # La persona demostró quién es: queda registrada en esta sesión del navegador
+        INTENTOS_FALLIDOS.pop(codigo, None)
+        session.permanent = bool(entrada.get("recordar"))
+        session["codigo_usuario"] = perfil.codigo_usuario
+
+        session["recordar"] = bool(entrada.get("recordar"))
+        session["ultimo_acceso"] = time.time()
+        print(f"🔑 Ingreso de {perfil.codigo_usuario}: recordar={session['recordar']}")
+
+        payload_persona = _armar_datos_persona(perfil)
+
+        return jsonify({
+            "status": "success",
+            "datos": payload_persona
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error en /cargar-datos: {e}")
+        return jsonify({"status": "error", "message": "No se pudieron cargar los datos. Intentá de nuevo."}), 500
+    finally:
+        session_db.close()
+
 
 def _modo_de_persona(perfil):
     """'automatico' si la persona tiene un correo real conectado; si no, 'manual'."""
