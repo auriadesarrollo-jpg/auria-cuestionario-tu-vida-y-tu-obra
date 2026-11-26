@@ -1279,27 +1279,14 @@ function mostrarCierreDeSesion(visible) {
 function limpiarFormularioCompleto() {
     // Vuelve los formularios a su estado inicial (vacíos) y borra los campos clave por si el navegador los restauró
     document.querySelectorAll("form").forEach(f => f.reset());
-    ["codigo_usu", "clave_acceso_usu", "llave-conexion"].forEach(id => {
+    ["codigo_usu", "clave_acceso_usu", "llave-conexion", "clave_aplicacion"].forEach(id => {
         const campo = document.getElementById(id);
         if (campo) campo.value = "";
     });
+    const inputClaveApp = document.querySelector('input[name="clave_aplicacion"]');
+    if (inputClaveApp) inputClaveApp.value = "";
 }
 
-async function cerrarSesion() {
-    try {
-        await fetch(`${BACKEND_URL}/cerrar-sesion`, { method: "POST" });
-    } catch (e) {
-        // aunque falle, se limpia la pantalla
-    }
-    limpiarFormularioCompleto();
-    try {
-        // Marca para limpiar otra vez después de recargar (algunos navegadores restauran los campos)
-        sessionStorage.setItem("auria_sesion_cerrada", "1");
-    } catch (e) {
-        // si no se puede guardar la marca, igual se recarga
-    }
-    window.location.reload();
-}
 
 window.addEventListener("load", () => {
     try {
@@ -1409,11 +1396,44 @@ document.addEventListener("DOMContentLoaded", () => {
     salir.href = "#";
     salir.id = "enlace-cerrar-sesion";
     salir.textContent = "Cerrar sesión";
-    salir.style.display = "inline";
+    salir.style.display = "none";
     salir.addEventListener("click", (e) => {
         e.preventDefault();
         cerrarSesion();
     });
+
+    async function cerrarSesion() {
+        try {
+            await fetch(`${BACKEND_URL}/cerrar-sesion`, { method: "POST" });
+        } catch (e) {
+            // aunque falle, se limpia la pantalla
+        }
+
+        if (typeof limpiarFormularioCompleto === "function") {
+            limpiarFormularioCompleto();
+        }
+
+        const inputUsu = document.getElementById("codigo_usu");
+        if (inputUsu) inputUsu.value = "";
+
+        const inputClaveAcceso = document.getElementById("clave_acceso_usu");
+        if (inputClaveAcceso) inputClaveAcceso.value = "";
+
+        const inputClaveApp = document.querySelector('input[name="clave_aplicacion"]');
+        if (inputClaveApp) {
+            inputClaveApp.value = "";
+            inputClaveApp.setAttribute("required", "required");
+            inputClaveApp.placeholder = "Pegá tu clave de aplicación";
+        }
+
+        try {
+            sessionStorage.setItem("auria_sesion_cerrada", "1");
+        } catch (e) {
+            // si no se puede guardar la marca, igual se recarga
+        }
+
+        window.location.reload();
+    }
 
     barra.append(etiqueta, ayuda, salir);
     campoCodigo.parentElement.insertAdjacentElement("afterend", barra);
