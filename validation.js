@@ -1292,8 +1292,26 @@ window.addEventListener("load", () => {
     try {
         if (sessionStorage.getItem("auria_sesion_cerrada") === "1") {
             sessionStorage.removeItem("auria_sesion_cerrada");
-            limpiarFormularioCompleto();
-            setTimeout(limpiarFormularioCompleto, 150);
+            const limpiarCamposSensibles = () => {
+                if (typeof limpiarFormularioCompleto === "function") {
+                    limpiarFormularioCompleto();
+                }
+                ["codigo_usu", "clave_acceso_usu", "llave-conexion", "clave_aplicacion"].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.value = "";
+                        el.setAttribute("autocomplete", "off");
+                    }
+                });
+                const claveApp = document.querySelector('input[name="clave_aplicacion"]');
+                if (claveApp) {
+                    claveApp.value = "";
+                    claveApp.setAttribute("autocomplete", "off");
+                }
+            };
+            limpiarCamposSensibles();
+            setTimeout(limpiarCamposSensibles, 200);
+            setTimeout(limpiarCamposSensibles, 700);
         }
     } catch (e) {
         // sin marca, no se hace nada
@@ -1396,7 +1414,7 @@ document.addEventListener("DOMContentLoaded", () => {
     salir.href = "#";
     salir.id = "enlace-cerrar-sesion";
     salir.textContent = "Cerrar sesión";
-    salir.style.display = "none";
+    salir.style.display = "inline";
     salir.addEventListener("click", (e) => {
         e.preventDefault();
         cerrarSesion();
