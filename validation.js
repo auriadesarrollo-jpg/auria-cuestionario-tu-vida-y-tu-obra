@@ -1288,34 +1288,28 @@ function limpiarFormularioCompleto() {
 }
 
 
-window.addEventListener("load", () => {
-    try {
-        if (sessionStorage.getItem("auria_sesion_cerrada") === "1") {
-            sessionStorage.removeItem("auria_sesion_cerrada");
-            const limpiarCamposSensibles = () => {
-                if (typeof limpiarFormularioCompleto === "function") {
-                    limpiarFormularioCompleto();
-                }
-                ["codigo_usu", "clave_acceso_usu", "llave-conexion", "clave_aplicacion"].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        el.value = "";
-                        el.setAttribute("autocomplete", "off");
-                    }
-                });
-                const claveApp = document.querySelector('input[name="clave_aplicacion"]');
-                if (claveApp) {
-                    claveApp.value = "";
-                    claveApp.setAttribute("autocomplete", "off");
-                }
-            };
-            limpiarCamposSensibles();
-            setTimeout(limpiarCamposSensibles, 200);
-            setTimeout(limpiarCamposSensibles, 700);
-        }
-    } catch (e) {
-        // sin marca, no se hace nada
-    }
+document.addEventListener("DOMContentLoaded", function () {
+    const params = new URLSearchParams(location.search);
+    if (!params.has("salio")) return;
+
+    // Saca ?salio=1 de la dirección para que un F5 posterior sea normal
+    history.replaceState(null, "", location.pathname);
+
+    const campos = ["codigo_usu", "clave_acceso_usu"]
+        .map(function (id) { return document.getElementById(id); })
+        .filter(Boolean);
+
+    const liberar = function (e) { e.target.readOnly = false; };
+
+    campos.forEach(function (el) {
+        el.value = "";
+        el.readOnly = true; // Chrome/Edge no autorrellenan campos de solo lectura
+        el.addEventListener("focus", liberar, { once: true });
+        el.addEventListener("pointerdown", liberar, { once: true });
+    });
+
+    const claveApp = document.querySelector('input[name="clave_aplicacion"]');
+    if (claveApp) claveApp.value = "";
 });
 
 function mostrarIdentidad(datos) {
@@ -1424,33 +1418,23 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             await fetch(`${BACKEND_URL}/cerrar-sesion`, { method: "POST" });
         } catch (e) {
-            // aunque falle, se limpia la pantalla
+            // si falla la red, igual se limpia la pantalla
         }
 
-        if (typeof limpiarFormularioCompleto === "function") {
-            limpiarFormularioCompleto();
+        ["codigo_usu", "clave_acceso_usu"].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.value = "";
+        });
+
+        const claveApp = document.querySelector('input[name="clave_aplicacion"]');
+        if (claveApp) {
+            claveApp.value = "";
+            claveApp.setAttribute("required", "required");
+            claveApp.placeholder = "Pegá tu clave de aplicación";
         }
 
-        const inputUsu = document.getElementById("codigo_usu");
-        if (inputUsu) inputUsu.value = "";
-
-        const inputClaveAcceso = document.getElementById("clave_acceso_usu");
-        if (inputClaveAcceso) inputClaveAcceso.value = "";
-
-        const inputClaveApp = document.querySelector('input[name="clave_aplicacion"]');
-        if (inputClaveApp) {
-            inputClaveApp.value = "";
-            inputClaveApp.setAttribute("required", "required");
-            inputClaveApp.placeholder = "Pegá tu clave de aplicación";
-        }
-
-        try {
-            sessionStorage.setItem("auria_sesion_cerrada", "1");
-        } catch (e) {
-            // si no se puede guardar la marca, igual se recarga
-        }
-
-        window.location.reload();
+        // Navegación nueva (no reload): el navegador no restaura los valores
+        location.replace(location.pathname + "?salio=1");
     }
 
     barra.append(etiqueta, ayuda, salir);
