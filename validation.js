@@ -586,6 +586,16 @@ function poblarFormulario(datos) {
     const campoPrioridades = document.getElementById("prioridades_delegacion");
     if (campoPrioridades && vPrioridades) campoPrioridades.value = vPrioridades;
 
+    const vConocimientoManual =
+        jsonInfo.conocimiento_manual ||
+        datos.conocimiento_manual ||
+        (jsonInfo.biblioteca_manual && jsonInfo.biblioteca_manual.conocimiento_manual) ||
+        "";
+    const campoConocimientoManual = document.getElementById("conocimiento_manual");
+    if (campoConocimientoManual && vConocimientoManual) {
+        campoConocimientoManual.value = vConocimientoManual;
+    }
+
     const campoJubilado = document.getElementById("es_jubilado") || document.getElementById("jubilado");
     if (campoJubilado && jsonInfo.es_jubilado) campoJubilado.value = jsonInfo.es_jubilado;
 

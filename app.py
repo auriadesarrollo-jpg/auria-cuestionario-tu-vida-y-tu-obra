@@ -324,6 +324,7 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada, codigo_usuar
             ] if p
         ]
         prof.obra_extra = " | ".join(extra_obra_partes)
+        print("🔎 DIAG obra_extra guardada:", repr(prof.obra_extra)[:200])
 
         # Las 9 categorías
         categorias_json = data.get("categorias") or {}
