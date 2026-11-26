@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import json
+import html
 from pathlib import Path
 
 
@@ -314,11 +315,12 @@ def sincronizar_con_procesador(data, email_contacto, clave_cifrada, codigo_usuar
         ):
             setattr(prof, campo, sanitize_input(data.get(campo, "")))
 
-        obra_extra_base = sanitize_input(data.get("obra_extra", ""))
+        obra_extra_base = html.unescape(sanitize_input(data.get("obra_extra", "")))
+        recuerdos_ia_limpio = html.unescape(recuerdos_ia)
         extra_obra_partes = [
             p for p in [
                 obra_extra_base,
-                f"Recordar para AURelia/AURhelios: {recuerdos_ia}" if recuerdos_ia else "",
+                f"Recordar para AURelia/AURhelios: {recuerdos_ia_limpio}" if recuerdos_ia_limpio else "",
             ] if p
         ]
         prof.obra_extra = " | ".join(extra_obra_partes)
@@ -722,8 +724,24 @@ def _armar_datos_persona(perfil):
                     "obra_extra",
                 ):
                     val = getattr(prof, campo, None)
-                    if val:
-                        datos_json[campo] = val
+                    if not val:
+                        continue
+                    if campo == "obra_extra":
+                        obra_partes_libres = []
+                        for seg in str(val).split(" | "):
+                            seg_limpio = html.unescape(seg.strip())
+                            if not seg_limpio:
+                                continue
+                            if seg_limpio.startswith("Recordar para AURelia/AURhelios:"):
+                                recuerdo_txt = seg_limpio.split(":", 1)[1].strip()
+                                if recuerdo_txt:
+                                    datos_json.setdefault("conocimiento_manual", recuerdo_txt)
+                            else:
+                                obra_partes_libres.append(seg_limpio)
+                        if obra_partes_libres:
+                            datos_json["obra_extra"] = " | ".join(obra_partes_libres)
+                    else:
+                        datos_json[campo] = html.unescape(val) if isinstance(val, str) else val
 
             cats_db = sesion.query(CategoryConfig).filter_by(user_id=user.id).all()
             if cats_db:
