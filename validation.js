@@ -1482,22 +1482,51 @@ function irAlInicioDeLaPagina() {
 }
 
 window.addEventListener("load", () => {
-    // Diagnóstico: qué elemento tiene el foco, si la dirección trae un ancla (#) y en qué posición cargó la página
-    const foco = document.activeElement;
-    console.log(
-        "AUR+IA diagnóstico de pantalla → foco en:",
-        foco ? (foco.tagName + "#" + (foco.id || "") + "." + (foco.className || "")) : "nada",
-        "| ancla en la dirección:", window.location.hash || "ninguna",
-        "| posición al cargar:", Math.round(window.scrollY)
-    );
+    try {
+        if (sessionStorage.getItem("auria_sesion_cerrada") === "1") {
+            sessionStorage.removeItem("auria_sesion_cerrada");
 
-    if (foco && foco !== document.body && typeof foco.blur === "function") {
-        foco.blur();   // si algo tomó el foco al cargar (por ejemplo el botón de enviar), se lo quita
+            const blindarCamposTrasCierre = () => {
+                if (typeof limpiarFormularioCompleto === "function") {
+                    limpiarFormularioCompleto();
+                }
+
+                const campoCod = document.getElementById("codigo_usu");
+                if (campoCod) {
+                    campoCod.value = "";
+                    campoCod.setAttribute("autocomplete", "off");
+                    campoCod.addEventListener("focus", () => {
+                        campoCod.setAttribute("autocomplete", "username");
+                    }, { once: true });
+                }
+
+                const campoClave = document.getElementById("clave_acceso_usu");
+                if (campoClave) {
+                    campoClave.value = "";
+                    campoClave.setAttribute("autocomplete", "new-password");
+                    campoClave.addEventListener("focus", () => {
+                        campoClave.setAttribute("autocomplete", "current-password");
+                    }, { once: true });
+                }
+
+                const claveApp = document.querySelector('input[name="clave_aplicacion"]');
+                if (claveApp) {
+                    claveApp.value = "";
+                    claveApp.setAttribute("autocomplete", "off");
+                }
+            };
+
+            blindarCamposTrasCierre();
+            let intentos = 0;
+            const barrido = setInterval(() => {
+                blindarCamposTrasCierre();
+                intentos += 1;
+                if (intentos >= 15) clearInterval(barrido);
+            }, 150);
+        }
+    } catch (e) {
+        // sin marca, no se hace nada
     }
-    irAlInicioDeLaPagina();
-    [150, 400, 900].forEach(ms => setTimeout(() => {
-        if (!personaYaSeDesplazo) irAlInicioDeLaPagina();
-    }, ms));
 });
 
 window.addEventListener("pageshow", (evento) => {
