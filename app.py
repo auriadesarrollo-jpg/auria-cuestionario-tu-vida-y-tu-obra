@@ -19,6 +19,8 @@ for ruta in [CARPETA_BACKEND, CARPETA_RAIZ, RUTA_ADMIN_CLIENTES]:
 
 import re
 import logging
+import requests
+from werkzeug.utils import secure_filename
 from flask import Flask, request, jsonify, send_file, send_from_directory, session
 import secrets
 from datetime import timedelta
@@ -45,6 +47,61 @@ print(User.__table__.columns.keys())
 from security import SecureKeyManager
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+TAMANO_MAXIMO_BYTES = 15 * 1024 * 1024  # 15 MB por archivo
+EXTENSIONES_BLOQUEADAS = {".exe", ".bat", ".cmd", ".com", ".msi", ".ps1", ".sh", ".vbs"}
+
+def _subir_a_supabase_storage(codigo_usu: str, archivo_storage) -> dict:
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    bucket = os.environ.get("SUPABASE_BUCKET", "archivos_adjuntos-usuarios").strip()
+
+    if not supabase_url or not service_key or not bucket:
+        raise RuntimeError("Faltan variables de entorno de Supabase en el servidor.")
+
+    nombre_original = archivo_storage.filename or "archivo"
+    nombre_seguro = secure_filename(nombre_original) or "archivo_sin_nombre"
+    extension = Path(nombre_seguro).suffix.lower()
+
+    if extension in EXTENSIONES_BLOQUEADAS:
+        raise ValueError(f"Tipo de archivo no permitido por seguridad ({extension}).")
+
+    contenido = archivo_storage.read()
+    if not contenido:
+        raise ValueError("El archivo está vacío.")
+
+    if len(contenido) > TAMANO_MAXIMO_BYTES:
+        raise ValueError("El archivo supera el límite máximo permitido de 15 MB.")
+
+    codigo_limpio = re.sub(r"[^A-Za-z0-9_-]", "", codigo_usu.strip().upper()) or "SIN_CODIGO"
+    marca_tiempo = time.strftime("%Y%m%d_%H%M%S")
+    ruta_objeto = f"{codigo_limpio}/{marca_tiempo}_{nombre_seguro}"
+
+    endpoint_upload = f"{supabase_url}/storage/v1/object/{bucket}/{ruta_objeto}"
+    content_type = archivo_storage.mimetype or "application/octet-stream"
+
+    respuesta = requests.post(
+        endpoint_upload,
+        headers={
+            "Authorization": f"Bearer {service_key}",
+            "apikey": service_key,
+            "Content-Type": content_type,
+            "x-upsert": "false",
+        },
+        data=contenido,
+        timeout=30,
+    )
+
+    if respuesta.status_code not in (200, 201):
+        raise RuntimeError(f"Supabase rechazó la subida ({respuesta.status_code}): {respuesta.text}")
+
+    return {
+        "bucket": bucket,
+        "ruta": ruta_objeto,
+        "nombre_original": nombre_original,
+        "tamano_bytes": len(contenido),
+        "content_type": content_type,
+    }
 
 # ----------------- RUTA A BASE DE DATOS DEFINITIVA (LOCAL O NUBE) -----------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -585,6 +642,35 @@ def enviar_cuestionario():
     finally:
         session_db.close()
 
+@app.route("/subir-adjunto-supabase", methods=["POST"])
+def subir_adjunto_supabase():
+    try:
+        archivo = request.files.get("archivo") or request.files.get("file")
+        if not archivo:
+            return jsonify({"status": "error", "message": "No se recibió ningún archivo."}), 400
+
+        codigo_usu = (
+            request.form.get("codigo_usu")
+            or request.form.get("codigo_usuario")
+            or session.get("codigo_usu")
+            or ""
+        ).strip().upper()
+
+        if not codigo_usu:
+            return jsonify({"status": "error", "message": "Falta el código de usuario (codigo_usu)."}), 400
+
+        resultado = _subir_a_supabase_storage(codigo_usu, archivo)
+        return jsonify({
+            "status": "ok",
+            "message": "Archivo guardado correctamente en Supabase Storage.",
+            "adjunto": resultado,
+        }), 200
+
+    except ValueError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 400
+    except Exception as exc:
+        logging.exception("Error al subir adjunto a Supabase Storage")
+        return jsonify({"status": "error", "message": f"Error interno al subir el archivo: {exc}"}), 500
     
 @app.route('/subir-biblioteca', methods=['POST'])
 def subir_biblioteca():
