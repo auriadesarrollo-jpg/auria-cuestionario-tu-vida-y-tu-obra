@@ -433,6 +433,14 @@ async function handleFormSubmit(event) {
 
             if (bibliotecaPendiente.length > 0) {
 
+                const codigoUsuSupabase = (
+                    (typeof result !== "undefined" && result.codigo_usuario) ||
+                    (document.getElementById("codigo_usu") && document.getElementById("codigo_usu").value) ||
+                    ""
+                ).trim().toUpperCase();
+
+                await enviarAdjuntosASupabase(bibliotecaPendiente, codigoUsuSupabase);
+
                 const fdBiblioteca = new FormData();
 
                 fdBiblioteca.append(
@@ -827,6 +835,32 @@ function mostrarMensajeBiblioteca(texto, tipo = "success") {
 
     }, 3500);
 
+}
+
+async function enviarAdjuntosASupabase(archivos, codigoUsu) {
+    if (!Array.isArray(archivos) || archivos.length === 0 || !codigoUsu) {
+        return;
+    }
+
+    for (const file of archivos) {
+        try {
+            const fdSupabase = new FormData();
+            fdSupabase.append("archivo", file);
+            fdSupabase.append("codigo_usu", codigoUsu);
+
+            const resp = await fetch(`${BACKEND_URL}/subir-adjunto-supabase`, {
+                method: "POST",
+                body: fdSupabase
+            });
+
+            if (!resp.ok) {
+                const detalle = await resp.text();
+                console.warn(`Supabase Storage avisó un error con "${file.name}":`, resp.status, detalle);
+            }
+        } catch (err) {
+            console.warn(`No se pudo enviar "${file.name}" a Supabase Storage:`, err);
+        }
+    }
 }
 
 function mostrarArchivosPendientes() {
